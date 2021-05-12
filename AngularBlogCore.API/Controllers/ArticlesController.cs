@@ -39,7 +39,7 @@ namespace AngularBlogCore.API.Controllers
                     .OrderByDescending(z => z.PublishDate);
 
                 int totalCount = query.Count();
-
+                //
 
                 // 5*(1-1) => 0
                 var articlesResponse = query.Skip((pageSize * (page - 1))).Take(5).ToList().
