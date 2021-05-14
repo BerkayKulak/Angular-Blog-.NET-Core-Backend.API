@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AngularBlogCore.API.Models;
 using AngularBlogCore.API.Responses;
+using System.Globalization;
 
 namespace AngularBlogCore.API.Controllers
 {
@@ -125,6 +126,52 @@ namespace AngularBlogCore.API.Controllers
             });
 
             return Ok(articles);
+        }
+
+        [HttpGet]
+        [Route("GetArticlesArchive")]
+        public IActionResult GetArticlesArchive()
+        {
+            System.Threading.Thread.Sleep(1000);
+            var query = _context.Articles.GroupBy(x => new { x.PublishDate.Year, x.PublishDate.Month })
+                .Select(y => new
+                {
+                    year = y.Key.Year,
+                    month = y.Key.Month,
+                    count = y.Count(),
+                    monthName = new DateTime(y.Key.Year,y.Key.Month,1).
+                    ToString("MMMM")
+
+
+
+
+                });
+
+
+
+            return Ok(query);
+        }
+
+
+        [HttpGet]
+        [Route("GetArticleArchiveList/{year}/{month}/{page}/{pageSize}")]
+        public IActionResult GetArticleArchiveList(int year,int month,int page,int pageSize)
+        {
+
+            System.Threading.Thread.Sleep(1700);
+            IQueryable<Article> query;
+            query = _context.Articles.Include(x => x.Category).Include(y => y.Comments).
+                Where(z => z.PublishDate.Year == year && z.PublishDate.Month == month).
+                OrderByDescending(f => f.PublishDate);
+
+            var resultQuery = ArticlePagination(query, page, pageSize);
+            var result = new
+            {
+                Articles = resultQuery.Item1,
+                TotalCount = resultQuery.Item2
+            };
+
+            return Ok(result);
         }
 
         // GET: api/Articles/5
@@ -246,6 +293,18 @@ namespace AngularBlogCore.API.Controllers
 
 
         }
+
+        [HttpGet()]
+        [Route("ArticleViewCountUp/{id}")]
+        public IActionResult ArticleViewCountUp(int id)
+        {
+            Article article = _context.Articles.Find(id);
+            article.ViewCount += 1;
+            _context.SaveChanges();
+            return Ok();
+
+        }
+
 
     }
 }
