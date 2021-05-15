@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using AngularBlogCore.API.Models;
 using AngularBlogCore.API.Responses;
 using System.Globalization;
+using System.IO;
 
 namespace AngularBlogCore.API.Controllers
 {
@@ -24,9 +25,22 @@ namespace AngularBlogCore.API.Controllers
 
         // GET: api/Articles
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Article>>> GetArticles()
+        public IActionResult GetArticles()
         {
-            return await _context.Articles.ToListAsync();
+            var articles = _context.Articles.Include(a => a.Category).Include(b => b.Comments).OrderByDescending(x => x.PublishDate).ToList().
+                Select(y => new ArticleResponse()
+                {
+                    Id = y.Id,
+                    Title = y.Title,
+                    Picture = y.Picture,
+                    Category = new CategoryResponse() { Id = y.Category.Id, Name = y.Category.Name },
+                    CommentCount = y.Comments.Count,
+                    ViewCount = y.ViewCount,
+                    PublishDate = y.PublishDate
+
+                }); ;
+            return Ok(articles);
+               
         }
 
 
@@ -213,12 +227,17 @@ namespace AngularBlogCore.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutArticle(int id, Article article)
         {
-            if (id != article.Id)
-            {
-                return BadRequest();
-            }
 
-            _context.Entry(article).State = EntityState.Modified;
+            Article firstArticle = _context.Articles.Find(id);
+            firstArticle.Title = article.Title;
+            firstArticle.ContentSummary = article.ContentSummary;
+            firstArticle.ContentMain = article.ContentMain;
+            firstArticle.CategoryId = article.Category.Id;
+            firstArticle.Picture = article.Picture;
+
+
+
+           // _context.Entry(article).State = EntityState.Modified;
 
             try
             {
@@ -243,17 +262,29 @@ namespace AngularBlogCore.API.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Article>> PostArticle(Article article)
+        public async Task<IActionResult> PostArticle(Article article)
         {
+       
+            if(article.Category !=null)
+            {
+                article.CategoryId = article.Category.Id;
+                
+            }
+            article.Category = null;
+            article.ViewCount = 0;
+            article.PublishDate = DateTime.Now;
+
+       
+       
             _context.Articles.Add(article);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetArticle", new { id = article.Id }, article);
+            return Ok();
         }
 
         // DELETE: api/Articles/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Article>> DeleteArticle(int id)
+        public async Task<IActionResult> DeleteArticle(int id)
         {
             var article = await _context.Articles.FindAsync(id);
             if (article == null)
@@ -264,7 +295,7 @@ namespace AngularBlogCore.API.Controllers
             _context.Articles.Remove(article);
             await _context.SaveChangesAsync();
 
-            return article;
+            return Ok();
         }
 
         private bool ArticleExists(int id)
@@ -305,6 +336,25 @@ namespace AngularBlogCore.API.Controllers
 
         }
 
+        [HttpPost]
+        [Route("SaveArticlePicture")]
+        public async Task<IActionResult> SaveArticlePicture(IFormFile picture)
+        {
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(picture.FileName);
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/articlePictures", fileName);
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                await picture.CopyToAsync(stream);
+
+            };
+
+            var result = new
+            {
+                path = "https://" + Request.Host + "/articlePictures/" + fileName
+        };
+
+            return Ok(result);
+        }
 
     }
 }
