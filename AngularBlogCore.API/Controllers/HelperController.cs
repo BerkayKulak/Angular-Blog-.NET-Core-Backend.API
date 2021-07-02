@@ -53,7 +53,7 @@ namespace AngularBlogCore.API.Controllers
 
                 smtpClient.UseDefaultCredentials = false;
 
-                smtpClient.Credentials = new System.Net.NetworkCredential("kulakberkay15@gmail.com", "43795164825Fb");
+                smtpClient.Credentials = new System.Net.NetworkCredential("Your Gmail Address", "Your password");
 
                 smtpClient.EnableSsl = true;
 
